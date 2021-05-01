@@ -12,6 +12,9 @@ app.get('/', (req, res, next) => {
     return res.send(`Openexcell task 2`);
 })
 app.use(cors());
+/* Configuring Routes */
+var Users = require('./app/Routes/Users');
+app.use('/', Users);
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
