@@ -6,7 +6,30 @@ const Moment = require('moment');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
+const multiparty = require('multiparty');
+const mv = require('mv');
+
 module.exports = {
+
+    // Parse the request data :
+    async parseRequest(req) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                let dataParse = new multiparty.Form();
+                dataParse.parse(req, (err, fields, files) => {
+                    if (err) {
+                        return reject({ message: err, status: 0 });
+                    }
+                    let parseObj = {};
+                    parseObj.fields = fields;
+                    parseObj.files = files;
+                    return resolve(parseObj);
+                });
+            } catch (error) {
+                return reject(error);
+            }
+        });
+    },
 
     // Check Required fields :
     async checkRequiredFields(requiredArr, reqBody){
@@ -135,5 +158,31 @@ module.exports = {
             next();
         }
     },
+
+    // Store post images :
+    async storeImage(images){
+        return new Promise(async (resolve, reject) => {
+            let imageArr = images.image;
+            let postImages = [];
+            let imagePath = '/public/';
+            if(imageArr && imageArr.length){
+                // Process original image :
+                imageArr.map(images => {
+                    let fileName = images.originalFilename.split(".");
+                    let fileExt = _.last(fileName);
+                    let imageName = 'post_' + Date.now().toString() + '.' + fileExt;
+                    let filePath = imagePath + imageName;
+                    postImages.push(filePath);
+                    mv(images.path, imageRoot + filePath, { mkdirp: true }, async function (err) {
+                        if(err){
+                            console.log('Error while storing images');
+                            reject(0);
+                        }
+                    });
+                });
+            }
+            resolve(postImages);
+        });
+    }
 
 };

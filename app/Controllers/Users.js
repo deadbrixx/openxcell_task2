@@ -187,6 +187,86 @@ class Users{
             };
         }
     }
+
+    /* Comment on Topic's Post*/
+    async commentOnPost(req){
+        try {
+            // Check fields validator :
+            let requiredArr = ["postId", "comment", "commentBy"];
+            let checkFields = await Service.checkRequiredFields(requiredArr, req.body);
+            if(!_.isEmpty(checkFields)){
+                return {
+                    status: 401,
+                    message: `Please send required fields : ${checkFields}`
+                };
+            }
+            else{
+                let findThePosts = await TopicPosts.findOne({_id: ObjectId(req.body.postId)});
+                if(_.isEmpty(findThePosts)){
+                    return {
+                        status: 400,
+                        message: `No Posts found`
+                    };
+                }
+                else{
+                    // Store the comment
+                    let commentObj = {comment: req.body.comment, commentBy: req.body.commentBy};
+                    await TopicPosts.updateOne({_id: ObjectId(req.body.postId)}, {$push: {postComments: commentObj}});
+                    return {
+                        status: 200,
+                        message: 'Comment has been added on the post successfully'
+                    };
+                }
+            }
+        } catch (error) {
+            console.log('commentOnPost-error', error);
+            return {
+                status: 500,
+                message: 'Internal server error'
+            };
+        }
+    }
+    
+    /* Get All Topics */
+    async getTopics(req){
+        try {
+            let limit = req.query && req.query.pageSize ? Number(req.query.pageSize) : 10;
+            let skip = req.query && req.query.page ? (Number(req.query.page) - 1) * limit : 0;
+            let findAllTopics = await Topics.find({}).populate("topicCreatedBy", {userName: 1}).skip(skip).limit(limit);
+            return {
+                status: 200,
+                message: 'Topics fetched successfully',
+                data: findAllTopics
+            };
+        } catch (error) {
+            console.log('getTopics-error', error);
+            return {
+                status: 500,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /* Get All Post and comment for Topics */
+    async getTopicPosts(req){
+        try {
+            let limit = req.query && req.query.pageSize ? Number(req.query.pageSize) : 10;
+            let skip = req.query && req.query.page ? (Number(req.query.page) - 1) * limit : 0;
+            let findAllTopicsPosts = await TopicPosts.find({}, {postName: 1, postComments: 1}).populate("topicId", {topicName: 1}).skip(skip).limit(limit);
+            return {
+                status: 200,
+                message: 'Posts and Comment fetched successfully',
+                data: findAllTopicsPosts
+            };
+        } catch (error) {
+            console.log('getTopicPosts-error', error);
+            return {
+                status: 500,
+                message: 'Internal server error'
+            };
+        }
+    }
+
 }
 
 module.exports = Users;
