@@ -95,6 +95,45 @@ module.exports = {
             }
             return resolve(token);
         });
-    }
+    },
+
+    // Add Auth middleware function :
+    async isAuth(req, res, next){
+        let authToken = req.headers.authorization;
+        if(_.isEmpty(authToken)){
+            return res.send({
+                status: 401,
+                message: `Please send token`
+            })
+        }
+        // Is token present in our db
+        let tokenDetails = Buffer.from(authToken, 'binary').toString();
+        var decoded = jwt.verify(tokenDetails, 'OpenXcell@123', { ignoreExpiration: true });
+        if (!decoded) { 
+            return res.send({
+                status: 401,
+                message: `Invalid token`
+            });
+        }
+        const authenticate = await Authentication.findOne({ token: tokenDetails });
+        if (_.isEmpty(authenticate)){
+            return res.send({
+                status: 401,
+                message: `Invalid token`
+            });
+        }
+        else{
+            // Is token not expired :
+            let expiryDate = Moment(authenticate.tokenExpiryTime, 'YYYY-MM-DD HH:mm:ss')
+            let now = Moment(new Date(), 'YYYY-MM-DD HH:mm:ss');
+            if (expiryDate < now) {
+                return res.send({
+                    status: 401,
+                    message: `Token expired`
+                });
+            }
+            next();
+        }
+    },
 
 };

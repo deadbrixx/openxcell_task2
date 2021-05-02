@@ -2,6 +2,8 @@ const User = require('../Models/Users').Users;
 const _ = require('lodash');
 const ObjectId = require('mongodb').ObjectID;
 const Service = require('../../services/Middleware');
+const Topics = require('../Models/Users').Topics;
+const TopicPosts = require('../Models/Users').TopicsPost;
 class Users{
   
   /* Register */
@@ -104,6 +106,81 @@ class Users{
             }
         } catch (error) {
             console.log('login-error', error);
+            return {
+                status: 500,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /* Create Topic */
+    async createTopic(req){
+        try {
+            // Check fields validator :
+            let requiredArr = ["topicName", "topicCreatedBy"];
+            let checkFields = await Service.checkRequiredFields(requiredArr, req.body);
+            if(!_.isEmpty(checkFields)){
+                return {
+                    status: 401,
+                    message: `Please send required fields : ${checkFields}`
+                };
+            }
+            else{
+                await Topics.create(req.body);
+                return {
+                    status: 200,
+                    message: 'Topic has been created successfully'
+                };
+            }
+        } catch (error) {
+            console.log('createTopic-error', error);
+            return {
+                status: 500,
+                message: 'Internal server error'
+            };
+        }
+    }
+
+    /* Create Topic Post*/
+    async createTopicPost(req){
+        try {
+            // Parse the request as we are using form-data to upload data and images :
+            let reqDataParse = await Service.parseRequest(req);
+            // Check fields validator :
+            let requiredArr = ["postBy", "topicId", "postName"];
+            let checkFields = await Service.checkRequiredFields(requiredArr, reqDataParse.fields);
+            if(!_.isEmpty(checkFields)){
+                return {
+                    status: 401,
+                    message: `Please send required fields : ${checkFields}`
+                };
+            }
+            else{
+                let findTheTopic = await Topics.findOne({_id: ObjectId(reqDataParse.fields.topicId[0])});
+                if(_.isEmpty(findTheTopic)){
+                    return {
+                        status: 400,
+                        message: `No Topic found`
+                    };
+                }
+                let postObj = {
+                    postBy: reqDataParse.fields.postBy[0],
+                    postName: reqDataParse.fields.postName[0],
+                    topicId: reqDataParse.fields.topicId[0]
+                };
+                let postImages = await Service.storeImage(reqDataParse.files);
+                if(!_.isEmpty(postImages)){
+                    postObj.postImages = postImages;
+                }
+                // Store the posts
+                await TopicPosts.create(postObj);
+                return {
+                    status: 200,
+                    message: 'Topic post has been added successfully'
+                };
+            }
+        } catch (error) {
+            console.log('createTopicPost-error', error);
             return {
                 status: 500,
                 message: 'Internal server error'
